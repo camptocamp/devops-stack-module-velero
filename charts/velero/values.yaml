@@ -27,7 +27,7 @@ annotations: {}
 
 # Labels to add to the Velero deployment's. Optional.
 labels:
-  tyrossel: true
+  tyrossel: "hey" # TODO: REmove
 
 # Annotations to add to the Velero deployment's pod template. Optional.
 #
@@ -63,12 +63,12 @@ initContainers:
   #   volumeMounts:
   #     - mountPath: /target
   #       name: plugins
-  # - name: velero-plugin-for-aws
-  #   image: velero/velero-plugin-for-aws:v1.7.0
-  #   imagePullPolicy: IfNotPresent
-  #   volumeMounts:
-  #     - mountPath: /target
-  #       name: plugins
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.7.0
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
 
 # SecurityContext to use for the Velero deployment. Optional.
 # Set fsGroup for `AWS IAM Roles for Service Accounts`
@@ -89,7 +89,7 @@ containerSecurityContext: {}
 lifecycle: {}
 
 # Pod priority class name to use for the Velero deployment. Optional.
-priorityClassName: ""
+priorityClassName:
 
 # The number of seconds to allow for graceful termination of the pod. Optional.
 terminationGracePeriodSeconds: 3600
@@ -243,11 +243,11 @@ configuration:
   backupStorageLocation:
     # name is the name of the backup storage location where backups should be stored. If a name is not provided,
     # a backup storage location will be created with the name "default". Optional.
-  - name:
+  - name: local-minio
     # provider is the name for the backup storage location provider.
-    provider:
+    provider: velero.io/aws
     # bucket is the name of the bucket to store backups in. Required.
-    bucket:
+    bucket: kind-cluster
     # caCert defines a base64 encoded CA bundle to use when verifying TLS connections to the provider. Optional.
     caCert:
     # prefix is the directory under which all Velero data should be stored within the bucket. Optional.
@@ -264,10 +264,10 @@ configuration:
       key:
     # Additional provider-specific configuration. See link above
     # for details of required/optional fields for your provider.
-    config: {}
-    #  region:
-    #  s3ForcePathStyle:
-    #  s3Url:
+    config:
+     region: us-east-1
+     s3ForcePathStyle: true
+     s3Url: "http://127-0-0-1.nip.io:9000/"
     #  kmsKeyId:
     #  resourceGroup:
     #  The ID of the subscription containing the storage account, if different from the cluster’s subscription. (Azure only)
@@ -285,9 +285,9 @@ configuration:
   # See https://velero.io/docs/v1.6/api-types/volumesnapshotlocation/
   volumeSnapshotLocation:
     # name is the name of the volume snapshot location where snapshots are being taken. Required.
-  - name:
+  - name: local-minio
     # provider is the name for the volume snapshot provider.
-    provider:
+    provider: velero.io/aws
     # Additional provider-specific configuration. See link above
     # for details of required/optional fields for your provider.
     config: {}
