@@ -13,7 +13,7 @@ resource "argocd_project" "this" {
 
   spec {
     description  = "Backup application project"
-    source_repos = ["https://github.com/camptocamp/devops-stack-module-<CHART_NAME>.git"]
+    source_repos = ["https://github.com/camptocamp/devops-stack-module-backup.git"]
 
     destination {
       name      = "in-cluster"
