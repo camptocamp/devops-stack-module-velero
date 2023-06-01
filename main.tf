@@ -4,7 +4,7 @@ resource "null_resource" "dependencies" {
 
 resource "argocd_project" "this" {
   metadata {
-    name      = "<CHART_NAME>"
+    name      = "backup"
     namespace = var.argocd_namespace
     annotations = {
       "devops-stack.io/argocd_namespace" = var.argocd_namespace
@@ -12,7 +12,7 @@ resource "argocd_project" "this" {
   }
 
   spec {
-    description  = "<CHART_NAME> application project"
+    description  = "Backup application project"
     source_repos = ["https://github.com/camptocamp/devops-stack-module-<CHART_NAME>.git"]
 
     destination {
@@ -37,7 +37,7 @@ data "utils_deep_merge_yaml" "values" {
 
 resource "argocd_application" "this" {
   metadata {
-    name      = "<CHART_NAME>"
+    name      = "velero"
     namespace = var.argocd_namespace
   }
 
@@ -52,9 +52,9 @@ resource "argocd_application" "this" {
     project = argocd_project.this.metadata.0.name
 
     source {
-      repo_url        = "https://github.com/camptocamp/devops-stack-module-<CHART_NAME>.git"
-      path            = "charts/<CHART_NAME>"
-      target_revision = var.target_revision
+      repo_url        = "https://github.com/camptocamp/devops-stack-module-backup.git"
+      path            = "charts/velero"
+      # target_revision = var.target_revision
       helm {
         values = data.utils_deep_merge_yaml.values.output
       }

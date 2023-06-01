@@ -1,17 +1,17 @@
 = devops-stack-module-template
 // Document attributes to replace along the document
 // Here you can define variables for something that keeps repeating along the text
-:chart-version: 1.2.3
-:original-repo-url: https://github.com/path/to/some/repository
+:chart-version: 4.0.2
+:original-repo-url: https://github.com/vmware-tanzu/helm-charts
 
-A https://devops-stack.io[DevOps Stack] module to deploy *_something_*.
+A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on Velero.
 
-The *_something_* chart used by this module is shipped in this repository as well, in order to avoid any unwanted behaviors caused by unsupported versions. 
+The Velero chart used by this module is shipped in this repository as well, in order to avoid any unwanted behaviors caused by unsupported versions.
 
 [cols="1,1,1",options="autowidth,header"]
 |===
 |Current Chart Version |Original Repository |Default Values
-|*{chart-version}* |{original-repo-url}/subpath/to/the/chart[Chart] |{original-repo-url}//subpath/to/the/values.yaml[`values.yaml`] (_here you can also use artifacthub.io_)
+|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/4.0.2?modal=values[`values.yaml`]
 |===
 
 == Usage
@@ -34,12 +34,6 @@ module "template" {
   ]
 }
 ----
-
-=== Something Explained Better
-
-_If there is some part of the module's configuration that needs more specific explanations, such as a very particular output on which every other module depends on, maybe consider creating a subsection to improve readability._
-
-NOTE: _The AsciiDoc syntax provides a way to write admonitions such as this one, so use it if you think it is useful. The https://docs.antora.org/antora/latest/asciidoc/admonitions/[official documentation] for Antora Docs provides more examples._
 
 == Technical Reference
 
@@ -185,7 +179,7 @@ The following outputs are exported:
 Description: ID to pass other modules in order to refer to this module as a dependency.
 // END_TF_DOCS
 
-=== Reference in table format 
+=== Reference in table format
 
 .Show tables
 [%collapsible]
