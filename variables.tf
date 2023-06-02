@@ -33,7 +33,7 @@ variable "cluster_issuer" {
 variable "namespace" {
   description = "Namespace where the applications's Kubernetes resources should be created. Namespace will be created in case it doesn't exist."
   type        = string
-  default     = "<NAMESPACE>"
+  default     = "velero"
 }
 
 variable "helm_values" {
@@ -65,3 +65,19 @@ variable "dependency_ids" {
 #######################
 ## Module variables
 #######################
+variable "aws_access_key_id" {
+		description = ""
+		type = string
+}
+
+variable "aws_secret_access_key" {
+		description = ""
+		type = string
+}
+
+
+# TODO: instead of two variables, we could have a list of backend providers:
+# - bucket_name
+# - URL (optional, for minio)
+# - aws_access_key_id
+# - aws_secret_access_key
