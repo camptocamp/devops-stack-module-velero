@@ -65,19 +65,3 @@ variable "dependency_ids" {
 #######################
 ## Module variables
 #######################
-variable "aws_access_key_id" {
-		description = ""
-		type = string
-}
-
-variable "aws_secret_access_key" {
-		description = ""
-		type = string
-}
-
-
-# TODO: instead of two variables, we could have a list of backend providers:
-# - bucket_name
-# - URL (optional, for minio)
-# - aws_access_key_id
-# - aws_secret_access_key
