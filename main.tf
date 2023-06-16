@@ -21,7 +21,7 @@ resource "kubernetes_secret" "velero_repo_credentials" {
 
 resource "argocd_project" "this" {
   metadata {
-    name      = "backup"
+    name      = "velero"
     namespace = var.argocd_namespace
     annotations = {
       "devops-stack.io/argocd_namespace" = var.argocd_namespace
