@@ -2,6 +2,23 @@ resource "null_resource" "dependencies" {
   triggers = var.dependency_ids
 }
 
+resource "random_password" "restic_repo_password" {
+  length  = 32
+  special = false
+}
+
+# This has to be deployed before velero as it cannot be set in the chart values
+resource "kubernetes_secret" "velero_repo_credentials" {
+  metadata {
+    name      = "velero-repo-credentials"
+    namespace = var.namespace
+  }
+  data = {
+    "repository-password" = random_password.restic_repo_password.result
+  }
+
+}
+
 resource "argocd_project" "this" {
   metadata {
     name      = "backup"
@@ -63,8 +80,8 @@ resource "argocd_application" "this" {
     project = argocd_project.this.metadata.0.name
 
     source {
-      repo_url        = "https://github.com/camptocamp/devops-stack-module-backup.git"
-      path            = "charts/velero"
+      repo_url = "https://github.com/camptocamp/devops-stack-module-backup.git"
+      path     = "charts/velero"
       # target_revision = var.target_revision
       helm {
         values = data.utils_deep_merge_yaml.values.output
@@ -95,6 +112,7 @@ resource "argocd_application" "this" {
 
   depends_on = [
     resource.null_resource.dependencies,
+    kubernetes_secret.velero_repo_credentials
   ]
 }
 
