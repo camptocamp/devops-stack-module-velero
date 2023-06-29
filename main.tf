@@ -7,6 +7,15 @@ resource "random_password" "restic_repo_password" {
   special = false
 }
 
+resource "kubernetes_namespace" "velero_namespace" {
+  metadata {
+    annotations = {
+      name = var.namespace
+    }
+    name = var.namespace
+  }
+}
+
 # This has to be deployed before velero as it cannot be set in the chart values
 resource "kubernetes_secret" "velero_repo_credentials" {
   metadata {
