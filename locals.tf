@@ -2,7 +2,14 @@ locals {
   helm_values = [{
     velero = {
       namespace        = "${var.namespace}"
-      snapshotsEnabled = true
+      snapshotsEnabled = false
+      metrics = {
+		enabled = true
+        serviceMonitor = {
+          autodetect = true
+          enabled    = true
+        }
+      }
     }
     grafana_dashboard = {
       enabled = false
