@@ -127,7 +127,7 @@
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Active Backup",
+      "title": "Active Backup(s)",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
