@@ -33,6 +33,17 @@ locals {
               labels = {
                 severity = "warning"
               }
+            },
+            {
+              alert = "VeleroBackupTooOld"
+              annotations = {
+                message = "No Velero backup {{ $labels.schedule }} has been made since {{ $value | humanizeTimestamp }}."
+              }
+              expr = "(time() - velero_backup_last_successful_timestamp{schedule!=\"\"}) / 60 > 3"
+              for  = "3m"
+              labels = {
+                severity = "warning"
+              }
             }
           ]
         }
