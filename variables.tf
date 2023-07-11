@@ -66,6 +66,13 @@ variable "dependency_ids" {
 ## Module variables
 #######################
 
+
+variable "enable_monitoring_dashboard" {
+  description = "Boolean to enable the provisioning of a Velero dashboard for Grafana."
+  type        = bool
+  default     = true
+}
+
 variable "alert_backup_timeout" {
   description = "Timeout in seconds before triggering the last successful backup alert"
   type        = number

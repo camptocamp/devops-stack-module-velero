@@ -49,7 +49,7 @@ locals {
       }
     }
     grafana_dashboard = {
-      enabled = false
+      enabled = var.enable_monitoring_dashboard
     }
   }]
 }
