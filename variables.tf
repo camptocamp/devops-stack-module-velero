@@ -65,3 +65,9 @@ variable "dependency_ids" {
 #######################
 ## Module variables
 #######################
+
+variable "alert_backup_timeout" {
+  description = "Timeout in seconds before triggering the last successful backup alert"
+  type        = number
+  default     = 60 * 60 * 24
+}

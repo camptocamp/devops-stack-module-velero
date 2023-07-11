@@ -9,7 +9,6 @@ locals {
           mountPath = "/target"
         }]
       }]
-      snapshotsEnabled = true
     }
   }]
 }

@@ -39,8 +39,7 @@ locals {
               annotations = {
                 message = "No Velero backup {{ $labels.schedule }} has been made since {{ $value | humanizeTimestamp }}."
               }
-              expr = "(time() - velero_backup_last_successful_timestamp{schedule!=\"\"}) / 60 > 3"
-              for  = "3m"
+              expr = "(time() - velero_backup_last_successful_timestamp{schedule!=\"\"}) > ${var.alert_backup_timeout}"
               labels = {
                 severity = "warning"
               }
