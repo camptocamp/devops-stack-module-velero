@@ -1,7 +1,7 @@
 = devops-stack-module-template
 // Document attributes to replace along the document
 // Here you can define variables for something that keeps repeating along the text
-:chart-version: 4.0.2
+:chart-version: 4.1.1
 :original-repo-url: https://github.com/vmware-tanzu/helm-charts
 
 A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on Velero.
@@ -11,7 +11,7 @@ The Velero chart used by this module is shipped in this repository as well, in o
 [cols="1,1,1",options="autowidth,header"]
 |===
 |Current Chart Version |Original Repository |Default Values
-|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/4.0.2?modal=values[`values.yaml`]
+|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/4.1.1?modal=values[`values.yaml`]
 |===
 
 == Usage
