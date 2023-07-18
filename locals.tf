@@ -1,10 +1,10 @@
 locals {
   helm_values = [{
     velero = {
-      deployNodeAgent  = true
+      deployNodeAgent = true
       nodeAgent = {
-          tolerations = {} # TODO
-        }
+        tolerations = {} # TODO
+      }
       snapshotsEnabled = true
 
       configuration = {
