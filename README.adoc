@@ -1,7 +1,7 @@
 = devops-stack-module-template
 // Document attributes to replace along the document
 // Here you can define variables for something that keeps repeating along the text
-:chart-version: 4.1.1
+:chart-version: 4.1.3
 :original-repo-url: https://github.com/vmware-tanzu/helm-charts
 
 A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on Velero.
@@ -11,7 +11,7 @@ The Velero chart used by this module is shipped in this repository as well, in o
 [cols="1,1,1",options="autowidth,header"]
 |===
 |Current Chart Version |Original Repository |Default Values
-|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/4.1.1?modal=values[`values.yaml`]
+|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/4.1.3?modal=values[`values.yaml`]
 |===
 
 == Usage
@@ -22,17 +22,49 @@ _You can start by giving a simple example and then show some others with increas
 
 [source,terraform]
 ----
-module "template" {
-  source = "git::https://github.com/camptocamp/devops-stack-module-template.git?ref=<RELEASE>"
+module "backup" {
+  # source           = "git::https://github.com/camptocamp/devops-stack-module-backup.git//eks?ref=grafana"
+  source           = "../module-backup/eks"
+  target_revision  = "grafana"
+  cluster_name     = local.cluster_name
+  base_domain      = local.base_domain
+  argocd_namespace = module.argocd_bootstrap.argocd_namespace
 
-  cluster_name            = local.cluster_name
-  argocd_namespace        = local.argocd_namespace
+  enable_monitoring_dashboard = true
 
-  # TODO Consider replacing this depends_on by our dependency_ids
-  depends_on = [
-    module.argocd_bootstrap,
-  ]
+  backup_schedules = {
+    snapshot-backup = {
+      disabled = false
+      schedule = "1 4 * * *"
+      template = {
+        # storageLocation    = "backup-bucket"
+        includedNamespaces = ["wordpress"]
+        includedResources  = ["persistentVolumes", "persistentVolumeClaims"]
+      }
+    },
+    restic-backup = {
+      disabled = false
+      schedule = "5 4 * * *"
+      template = {
+        # storageLocation    = "backup-bucket"
+        includedNamespaces = ["wordpress", "velero"]
+        includedResources  = ["persistentVolumes", "persistentVolumeClaims", "pods"]
+      }
+    }
+  }
+
+  default_backup_storage = {
+    bucket_id    = aws_s3_bucket.velero_backup_storage.id
+    region       = aws_s3_bucket.velero_backup_storage.region
+    iam_role_arn = module.iam_assumable_role_velero.iam_role_arn
+  }
+
+  dependency_ids = {
+    kube-prometheus-stack = module.kube-prometheus-stack.id,
+    argocd                = module.argocd_bootstrap.id # TODO Can cause issues on the first cluster bootstrap. If it's the case, deploy after the last argocd.
+  }
 }
+
 ----
 
 == Technical Reference
@@ -43,9 +75,12 @@ _You can safely delete the content between the comments `BEGIN_TF_DOCS` / `END_T
 
 === Dependencies
 
-==== `module.argocd_bootstrap`
+==== `module.kube-prometheus-stack`
 
-This module must be one of the first ones to be deployed and consequently it needs to be deployed after the module `argocd_bootstrap`.
+As this module contains a Prometheus metrics endpoint and a Grafana dashboard, it has to be deployed after the Prometheus stack.
+
+==== ``
+
 
 // BEGIN_TF_DOCS
 === Requirements
