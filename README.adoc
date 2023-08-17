@@ -1,7 +1,7 @@
 = devops-stack-module-template
 // Document attributes to replace along the document
 // Here you can define variables for something that keeps repeating along the text
-:chart-version: 4.1.3
+:chart-version: 5.0.0
 :original-repo-url: https://github.com/vmware-tanzu/helm-charts
 
 A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on Velero.
