@@ -1,7 +1,7 @@
 = devops-stack-module-template
 // Document attributes to replace along the document
 // Here you can define variables for something that keeps repeating along the text
-:chart-version: 4.0.2
+:chart-version: 4.1.3
 :original-repo-url: https://github.com/vmware-tanzu/helm-charts
 
 A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on Velero.
@@ -11,7 +11,7 @@ The Velero chart used by this module is shipped in this repository as well, in o
 [cols="1,1,1",options="autowidth,header"]
 |===
 |Current Chart Version |Original Repository |Default Values
-|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/4.0.2?modal=values[`values.yaml`]
+|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/4.1.3?modal=values[`values.yaml`]
 |===
 
 == Usage
@@ -22,17 +22,49 @@ _You can start by giving a simple example and then show some others with increas
 
 [source,terraform]
 ----
-module "template" {
-  source = "git::https://github.com/camptocamp/devops-stack-module-template.git?ref=<RELEASE>"
+module "backup" {
+  # source           = "git::https://github.com/camptocamp/devops-stack-module-backup.git//eks?ref=grafana"
+  source           = "../module-backup/eks"
+  target_revision  = "grafana"
+  cluster_name     = local.cluster_name
+  base_domain      = local.base_domain
+  argocd_namespace = module.argocd_bootstrap.argocd_namespace
 
-  cluster_name            = local.cluster_name
-  argocd_namespace        = local.argocd_namespace
+  enable_monitoring_dashboard = true
 
-  # TODO Consider replacing this depends_on by our dependency_ids
-  depends_on = [
-    module.argocd_bootstrap,
-  ]
+  backup_schedules = {
+    snapshot-backup = {
+      disabled = false
+      schedule = "1 4 * * *"
+      template = {
+        # storageLocation    = "backup-bucket"
+        includedNamespaces = ["wordpress"]
+        includedResources  = ["persistentVolumes", "persistentVolumeClaims"]
+      }
+    },
+    restic-backup = {
+      disabled = false
+      schedule = "5 4 * * *"
+      template = {
+        # storageLocation    = "backup-bucket"
+        includedNamespaces = ["wordpress", "velero"]
+        includedResources  = ["persistentVolumes", "persistentVolumeClaims", "pods"]
+      }
+    }
+  }
+
+  default_backup_storage = {
+    bucket_id    = aws_s3_bucket.velero_backup_storage.id
+    region       = aws_s3_bucket.velero_backup_storage.region
+    iam_role_arn = module.iam_assumable_role_velero.iam_role_arn
+  }
+
+  dependency_ids = {
+    kube-prometheus-stack = module.kube-prometheus-stack.id,
+    argocd                = module.argocd_bootstrap.id # TODO Can cause issues on the first cluster bootstrap. If it's the case, deploy after the last argocd.
+  }
 }
+
 ----
 
 == Technical Reference
@@ -43,9 +75,12 @@ _You can safely delete the content between the comments `BEGIN_TF_DOCS` / `END_T
 
 === Dependencies
 
-==== `module.argocd_bootstrap`
+==== `module.kube-prometheus-stack`
 
-This module must be one of the first ones to be deployed and consequently it needs to be deployed after the module `argocd_bootstrap`.
+As this module contains a Prometheus metrics endpoint and a Grafana dashboard, it has to be deployed after the Prometheus stack.
+
+==== ``
+
 
 // BEGIN_TF_DOCS
 === Requirements
@@ -53,6 +88,8 @@ This module must be one of the first ones to be deployed and consequently it nee
 The following requirements are needed by this module:
 
 - [[requirement_argocd]] <<requirement_argocd,argocd>> (>= 4)
+
+- [[requirement_kubernetes]] <<requirement_kubernetes,kubernetes>> (~> 2)
 
 - [[requirement_null]] <<requirement_null,null>> (>= 3)
 
@@ -62,11 +99,17 @@ The following requirements are needed by this module:
 
 The following providers are used by this module:
 
-- [[provider_utils]] <<provider_utils,utils>> (>= 1)
+- [[provider_null]] <<provider_null,null>> (>= 3)
+
+- [[provider_random]] <<provider_random,random>>
+
+- [[provider_kubernetes]] <<provider_kubernetes,kubernetes>> (~> 2)
 
 - [[provider_argocd]] <<provider_argocd,argocd>> (>= 4)
 
-- [[provider_null]] <<provider_null,null>> (>= 3)
+- [[provider_helm]] <<provider_helm,helm>>
+
+- [[provider_utils]] <<provider_utils,utils>> (>= 1)
 
 === Resources
 
@@ -74,8 +117,13 @@ The following resources are used by this module:
 
 - https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/application[argocd_application.this] (resource)
 - https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/project[argocd_project.this] (resource)
+- https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace[kubernetes_namespace.velero_namespace] (resource)
+- https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/secret[kubernetes_secret.velero_repo_credentials] (resource)
 - https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.dependencies] (resource)
+- https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.k8s_resources] (resource)
 - https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.this] (resource)
+- https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password[random_password.restic_repo_password] (resource)
+- https://registry.terraform.io/providers/hashicorp/helm/latest/docs/data-sources/template[helm_template.this] (data source)
 - https://registry.terraform.io/providers/cloudposse/utils/latest/docs/data-sources/deep_merge_yaml[utils_deep_merge_yaml.values] (data source)
 
 === Required Inputs
@@ -128,7 +176,7 @@ Description: Namespace where the applications's Kubernetes resources should be c
 
 Type: `string`
 
-Default: `"<NAMESPACE>"`
+Default: `"velero"`
 
 ==== [[input_helm_values]] <<input_helm_values,helm_values>>
 
@@ -170,6 +218,48 @@ Type: `map(string)`
 
 Default: `{}`
 
+==== [[input_backup_schedules]] <<input_backup_schedules,backup_schedules>>
+
+Description: TBD
+
+Type:
+[source,hcl]
+----
+map(object({
+    disabled    = optional(bool, false)
+    labels      = optional(map(string), {})
+    annotations = optional(map(string), {})
+    schedule    = string
+    template = object({
+      # labels             = optional(map(string), {}) # TODO: test
+      # annotations        = optional(map(string), {}) # TODO: test
+      storageLocation    = optional(string)
+      ttl                = optional(string)
+      includedNamespaces = list(string)
+      includedResources  = list(string)
+      # enableSnapshot     = optional(bool, true)
+    })
+  }))
+----
+
+Default: `null`
+
+==== [[input_enable_monitoring_dashboard]] <<input_enable_monitoring_dashboard,enable_monitoring_dashboard>>
+
+Description: Boolean to enable the provisioning of a Velero dashboard for Grafana.
+
+Type: `bool`
+
+Default: `true`
+
+==== [[input_alert_backup_timeout]] <<input_alert_backup_timeout,alert_backup_timeout>>
+
+Description: Timeout in seconds before triggering the last successful backup alert
+
+Type: `number`
+
+Default: `86400`
+
 === Outputs
 
 The following outputs are exported:
@@ -177,6 +267,10 @@ The following outputs are exported:
 ==== [[output_id]] <<output_id,id>>
 
 Description: ID to pass other modules in order to refer to this module as a dependency.
+
+==== [[output_restic_repo_password]] <<output_restic_repo_password,restic_repo_password>>
+
+Description: the password to access the restic repositories
 // END_TF_DOCS
 
 === Reference in table format
@@ -191,6 +285,7 @@ Description: ID to pass other modules in order to refer to this module as a depe
 |===
 |Name |Version
 |[[requirement_argocd]] <<requirement_argocd,argocd>> |>= 4
+|[[requirement_kubernetes]] <<requirement_kubernetes,kubernetes>> |~> 2
 |[[requirement_null]] <<requirement_null,null>> |>= 3
 |[[requirement_utils]] <<requirement_utils,utils>> |>= 1
 |===
@@ -200,9 +295,12 @@ Description: ID to pass other modules in order to refer to this module as a depe
 [cols="a,a",options="header,autowidth"]
 |===
 |Name |Version
+|[[provider_random]] <<provider_random,random>> |n/a
+|[[provider_kubernetes]] <<provider_kubernetes,kubernetes>> |~> 2
+|[[provider_argocd]] <<provider_argocd,argocd>> |>= 4
+|[[provider_helm]] <<provider_helm,helm>> |n/a
 |[[provider_null]] <<provider_null,null>> |>= 3
 |[[provider_utils]] <<provider_utils,utils>> |>= 1
-|[[provider_argocd]] <<provider_argocd,argocd>> |>= 4
 |===
 
 = Resources
@@ -212,8 +310,13 @@ Description: ID to pass other modules in order to refer to this module as a depe
 |Name |Type
 |https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/application[argocd_application.this] |resource
 |https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/project[argocd_project.this] |resource
+|https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace[kubernetes_namespace.velero_namespace] |resource
+|https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/secret[kubernetes_secret.velero_repo_credentials] |resource
 |https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.dependencies] |resource
+|https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.k8s_resources] |resource
 |https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.this] |resource
+|https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password[random_password.restic_repo_password] |resource
+|https://registry.terraform.io/providers/hashicorp/helm/latest/docs/data-sources/template[helm_template.this] |data source
 |https://registry.terraform.io/providers/cloudposse/utils/latest/docs/data-sources/deep_merge_yaml[utils_deep_merge_yaml.values] |data source
 |===
 
@@ -255,7 +358,7 @@ Description: ID to pass other modules in order to refer to this module as a depe
 |[[input_namespace]] <<input_namespace,namespace>>
 |Namespace where the applications's Kubernetes resources should be created. Namespace will be created in case it doesn't exist.
 |`string`
-|`"<NAMESPACE>"`
+|`"velero"`
 |no
 
 |[[input_helm_values]] <<input_helm_values,helm_values>>
@@ -296,6 +399,44 @@ object({
 |`{}`
 |no
 
+|[[input_backup_schedules]] <<input_backup_schedules,backup_schedules>>
+|TBD
+|
+
+[source]
+----
+map(object({
+    disabled    = optional(bool, false)
+    labels      = optional(map(string), {})
+    annotations = optional(map(string), {})
+    schedule    = string
+    template = object({
+      # labels             = optional(map(string), {}) # TODO: test
+      # annotations        = optional(map(string), {}) # TODO: test
+      storageLocation    = optional(string)
+      ttl                = optional(string)
+      includedNamespaces = list(string)
+      includedResources  = list(string)
+      # enableSnapshot     = optional(bool, true)
+    })
+  }))
+----
+
+|`null`
+|no
+
+|[[input_enable_monitoring_dashboard]] <<input_enable_monitoring_dashboard,enable_monitoring_dashboard>>
+|Boolean to enable the provisioning of a Velero dashboard for Grafana.
+|`bool`
+|`true`
+|no
+
+|[[input_alert_backup_timeout]] <<input_alert_backup_timeout,alert_backup_timeout>>
+|Timeout in seconds before triggering the last successful backup alert
+|`number`
+|`86400`
+|no
+
 |===
 
 = Outputs
@@ -304,6 +445,7 @@ object({
 |===
 |Name |Description
 |[[output_id]] <<output_id,id>> |ID to pass other modules in order to refer to this module as a dependency.
+|[[output_restic_repo_password]] <<output_restic_repo_password,restic_repo_password>> |the password to access the restic repositories
 |===
 // END_TF_TABLES
 ====
