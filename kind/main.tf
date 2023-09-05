@@ -10,5 +10,9 @@ module "backup" {
   app_autosync     = var.app_autosync
   dependency_ids   = var.dependency_ids
 
+  backup_schedules            = var.backup_schedules
+  enable_monitoring_dashboard = var.enable_monitoring_dashboard
+  alert_backup_timeout        = var.alert_backup_timeout
+
   helm_values = concat(local.helm_values, var.helm_values)
 }
