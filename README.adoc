@@ -1,21 +1,26 @@
-= devops-stack-module-template
+= devops-stack-module-velero
 // Document attributes to replace along the document
 // Here you can define variables for something that keeps repeating along the text
 :chart-version: 5.0.2
 :original-repo-url: https://github.com/vmware-tanzu/helm-charts
 
-A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on Velero.
+A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on https://velero.io[Velero].
+
+This module add the ability to perform backups of a cluster. This includes all Kubernetes objects, although
 
 The Velero chart used by this module is shipped in this repository as well, in order to avoid any unwanted behaviors caused by unsupported versions.
 
 [cols="1,1,1",options="autowidth,header"]
 |===
 |Current Chart Version |Original Repository |Default Values
-|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/4.1.3?modal=values[`values.yaml`]
+|*{chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/{chart-version}?modal=values[`values.yaml`]
 |===
 
 == Usage
 
+=== Backup
+
+Here is an example of the module usage in the
 _Here you will show examples of how to call this module on your code. Note that the `depends_on` needs to be adapted to your use case._
 
 _You can start by giving a simple example and then show some others with increasing complexity and/or for specific use cases._
@@ -23,64 +28,105 @@ _You can start by giving a simple example and then show some others with increas
 [source,terraform]
 ----
 module "backup" {
-  # source           = "git::https://github.com/camptocamp/devops-stack-module-backup.git//eks?ref=grafana"
-  source           = "../module-backup/eks"
-  target_revision  = "grafana"
+  source           = "git::https://github.com/camptocamp/devops-stack-module-backup.git//eks"
   cluster_name     = local.cluster_name
   base_domain      = local.base_domain
   argocd_namespace = module.argocd_bootstrap.argocd_namespace
 
+  ``
   enable_monitoring_dashboard = true
 
+  # Automated backups can be specified.
+  #
+  # The included Resources is very important: if the resource `pods` is specified,
+  # then velero will not attempt to use the native snapshot feature of the object
+  # storage of the cloud provider (EBS snapshots), and will use the File System Backup, i.e
+  # Restic.
   backup_schedules = {
+
+    # This schedule will use the native snapshot ability to backup the PVC
     snapshot-backup = {
+      # Can temporarly disable snapshot schedules
       disabled = false
-      schedule = "1 4 * * *"
+      # Cron-style scheduling
+      schedule = "2 4 * * *"
       template = {
-        # storageLocation    = "backup-bucket"
+        # Select the backend for this schedule
+        storageLocation    = "backup-bucket"
         includedNamespaces = ["wordpress"]
         includedResources  = ["persistentVolumes", "persistentVolumeClaims"]
       }
     },
+    # This schedule will force the Restic backend to backup the PVC
     restic-backup = {
       disabled = false
-      schedule = "5 4 * * *"
+      schedule = "2 2 * * *"
       template = {
-        # storageLocation    = "backup-bucket"
-        includedNamespaces = ["wordpress", "velero"]
+        # If using an non-default location:
+        storageLocation    = "backup-bucket"
+        includedNamespaces = ["wordpress"]
         includedResources  = ["persistentVolumes", "persistentVolumeClaims", "pods"]
       }
     }
   }
 
+  #
   default_backup_storage = {
     bucket_id    = aws_s3_bucket.velero_backup_storage.id
     region       = aws_s3_bucket.velero_backup_storage.region
     iam_role_arn = module.iam_assumable_role_velero.iam_role_arn
   }
 
-  dependency_ids = {
-    kube-prometheus-stack = module.kube-prometheus-stack.id,
-    argocd                = module.argocd_bootstrap.id # TODO Can cause issues on the first cluster bootstrap. If it's the case, deploy after the last argocd.
-  }
 }
 
 ----
 
-== Technical Reference
+Once the Velero controller is deployed on the server, it is also possible to perform manual backup from the `velero` client:
 
-_This section will contain the more technical details of the module. It is mainly generated automatically by Terraform Docs (everything that is between the comments `BEGIN_TF_DOCS` / `END_TF_DOCS`). However, it is recommended to, at the bare minimum, add a dependencies section to explain the reason on why this module could depend on another one from the DevOps Stack._
+[source,bash]
+----
+velero backup create \
+    --included-namespaces wordpress,loki \
+    --included-resources pv,pvc,pods \
+    --storage-location my-s3-bucket \
+    my-new-backup
+----
 
-_You can safely delete the content between the comments `BEGIN_TF_DOCS` / `END_TF_DOCS` and `BEGIN_TF_TABLES` / `END_TF_TABLES` when creating your on module._
+=== Restore
+
+The backup can be restored manually with the following command:
+
+[source,bash]
+----
+# From a
+velero restore create --from-backup my-new-backup
+velero restore create --from-schedule restic-backup
+----
+
+== Limitations
+
+=== KinD setup
+
+Velero cannot perform backups of `hostPath` volumes, which are the volumes used in a KinD setup. Therefore, this module cannot be used in a Devops stack on KinD.
+
+== Techniral Reference
+
 
 === Dependencies
 
 ==== `module.kube-prometheus-stack`
 
-As this module contains a Prometheus metrics endpoint and a Grafana dashboard, it has to be deployed after the Prometheus stack.
+As this module contains a Prometheus metrics endpoint and a Grafana dashboard, it has to be deployed after the https://github.com/camptocamp/devops-stack-module-kube-prometheus-stack[Prometheus stack].
 
-==== ``
+==== `module.argocd`
 
+Velero is deployed as an ArgoCD application, which means that ArgoCD has to be deployed first.
+
+==== S3 bucket or equivalent
+
+In order to perform backups, Velero needs a storage location for backups, either a S3 compatible storage (AWS S3, Minio, etc.), Azure Blob storage, etc.
+
+Velero backs all Kubernetes objects to the designated
 
 // BEGIN_TF_DOCS
 === Requirements
