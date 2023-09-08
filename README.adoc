@@ -20,10 +20,12 @@ The Velero chart used by this module is shipped in this repository as well, in o
 
 === Backup
 
-Here is an example of the module usage in the
-_Here you will show examples of how to call this module on your code. Note that the `depends_on` needs to be adapted to your use case._
+Here is an example of the module usage:
 
-_You can start by giving a simple example and then show some others with increasing complexity and/or for specific use cases._
+- A default backend in a AWS S3 bucket, accessed with a ServiceAccount
+- A schedule at 4 a.m, which uses EBS snapshots as backend for PVC
+- A schedule at 2 a.m, which uses Restic as backend for PVC
+- Prometheus monitoring with a Grafana dashboard
 
 [source,terraform]
 ----
@@ -45,7 +47,7 @@ module "backup" {
   backup_schedules = {
 
     # This schedule will use the native snapshot ability to backup the PVC
-    snapshot-backup = {
+    snapshot-schedule = {
       # Can temporarly disable snapshot schedules
       disabled = false
       # Cron-style scheduling
@@ -58,7 +60,7 @@ module "backup" {
       }
     },
     # This schedule will force the Restic backend to backup the PVC
-    restic-backup = {
+    restic-schedule = {
       disabled = false
       schedule = "2 2 * * *"
       template = {
@@ -70,7 +72,6 @@ module "backup" {
     }
   }
 
-  #
   default_backup_storage = {
     bucket_id    = aws_s3_bucket.velero_backup_storage.id
     region       = aws_s3_bucket.velero_backup_storage.region
@@ -94,14 +95,23 @@ velero backup create \
 
 === Restore
 
-The backup can be restored manually with the following command:
+The backup can be restored manually with the following commands:
 
 [source,bash]
 ----
-# From a
+# Restore from a backup
 velero restore create --from-backup my-new-backup
-velero restore create --from-schedule restic-backup
+# Restore from the last backup of a schedule
+velero restore create --from-schedule restic-schedule
 ----
+
+TODO: Link to Velero CLI documentation
+
+TODO: In order to perform restore successful
+
+== Monitoring
+
+TODO: grafana dashboard (screenshot), alerts
 
 == Limitations
 
@@ -109,8 +119,7 @@ velero restore create --from-schedule restic-backup
 
 Velero cannot perform backups of `hostPath` volumes, which are the volumes used in a KinD setup. Therefore, this module cannot be used in a Devops stack on KinD.
 
-== Techniral Reference
-
+== Technical Reference
 
 === Dependencies
 
