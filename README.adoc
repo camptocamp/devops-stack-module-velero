@@ -6,7 +6,7 @@
 
 A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on https://velero.io[Velero].
 
-This module add the ability to perform backups of a cluster. This includes all Kubernetes objects, although
+This module add the ability to perform backups of a cluster. This includes all Kubernetes objects, although with the GitOps approach of the Devops Stack, it is not necessary to have a backup of all Kubernetes objects, as they are generally disposable and recreated by ArgoCD. 
 
 The Velero chart used by this module is shipped in this repository as well, in order to avoid any unwanted behaviors caused by unsupported versions.
 
