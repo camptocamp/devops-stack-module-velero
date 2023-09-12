@@ -115,7 +115,7 @@ TODO: In order to perform restore successful
 
 == Monitoring
 
-image::grafana-velero-dashboard.png["Grafana dashboard with backup informations"]
+image:https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png["Grafana dashboard with backup informations"]
 
 This module also setup some alerting in Prometheus for the following cases:
 
