@@ -6,7 +6,7 @@
 
 A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on https://velero.io[Velero].
 
-This module add the ability to perform backups of a cluster. This includes all Kubernetes objects, although with the GitOps approach of the Devops Stack, it is not necessary to have a backup of all Kubernetes objects, as they are generally disposable and recreated by ArgoCD. 
+This module add the ability to perform backups of a cluster. This includes all Kubernetes objects, although with the GitOps approach of the Devops Stack, it is not necessary to have a backup of all Kubernetes objects, as they are generally disposable and recreated by ArgoCD.
 
 The Velero chart used by this module is shipped in this repository as well, in order to avoid any unwanted behaviors caused by unsupported versions.
 
@@ -78,6 +78,9 @@ module "backup" {
     iam_role_arn = module.iam_assumable_role_velero.iam_role_arn
   }
 
+  # Triggers an alert if latest backup is older than this, in seconds
+  alert_backup_timeout = 60 * 60 * 24
+
 }
 
 ----
@@ -105,13 +108,21 @@ velero restore create --from-backup my-new-backup
 velero restore create --from-schedule restic-schedule
 ----
 
+In order to
 TODO: Link to Velero CLI documentation
 
 TODO: In order to perform restore successful
 
 == Monitoring
 
-TODO: grafana dashboard (screenshot), alerts
+image::assets/images/grafana-velero-dashboard.png["Grafana dashboard with backup informations"]
+
+This module also setup some alerting in Prometheus for the following cases:
+
+- Partially failed backups ratio higher than a specified amount
+- Failed backups ratio higher than a specified amount
+- No successful backup for a specified amount of time
+
 
 == Limitations
 
