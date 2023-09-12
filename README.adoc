@@ -115,13 +115,13 @@ TODO: In order to perform restore successful
 
 == Monitoring
 
-image::assets/images/grafana-velero-dashboard.png["Grafana dashboard with backup informations"]
+image::grafana-velero-dashboard.png["Grafana dashboard with backup informations"]
 
 This module also setup some alerting in Prometheus for the following cases:
 
-- Partially failed backups ratio higher than a specified amount
-- Failed backups ratio higher than a specified amount
-- No successful backup for a specified amount of time
+- Partially failed backups ratio higher than a specified amount (`alert_partially_failed_ratio`)
+- Failed backups ratio higher than a specified amount (`alert_failed_ratio`)
+- No successful backup for a specified amount of time (`alert_backup_timeout`)
 
 
 == Limitations
