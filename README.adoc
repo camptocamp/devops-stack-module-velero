@@ -27,23 +27,23 @@ Here is an example of the module usage:
 - A schedule at 2 a.m, which uses Restic as backend for PVC
 - Prometheus monitoring with a Grafana dashboard
 
+IMPORTANT: The included resources is very important: if the resource `pods` is
+specified, then velero will not attempt to use the native snapshot feature of
+the object storage of the cloud provider (EBS snapshots), and will use the File
+System Backup, i.e Restic.
+
 [source,terraform]
 ----
-module "backup" {
-  source           = "git::https://github.com/camptocamp/devops-stack-module-velero.git//eks"
+module "velero" {
+  source           = "git::https://github.com/camptocamp/devops-stack-module-velero.git//eks?ref=<RELEASE>"
   cluster_name     = local.cluster_name
   base_domain      = local.base_domain
   argocd_namespace = module.argocd_bootstrap.argocd_namespace
 
-  ``
   enable_monitoring_dashboard = true
 
   # Automated backups can be specified.
   #
-  # The included Resources is very important: if the resource `pods` is specified,
-  # then velero will not attempt to use the native snapshot feature of the object
-  # storage of the cloud provider (EBS snapshots), and will use the File System Backup, i.e
-  # Restic.
   backup_schedules = {
 
     # This schedule will use the native snapshot ability to backup the PVC
@@ -85,6 +85,10 @@ module "backup" {
   # Triggers an alert if latest backup is older than this, in seconds
   alert_backup_timeout = 60 * 60 * 24
 
+  dependency_ids = {
+    kube-prometheus-stack = module.kube-prometheus-stack.id,
+    argocd                = module.argocd_bootstrap.id
+  }
 }
 
 ----
@@ -125,22 +129,22 @@ If enabled, this module exposes Velero metrics and setup a scrape target for Pro
 
 This module contains a Grafana dashboard to monitor the frequency, state and frequency of backups, as shown here below.
 
-image:https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png["Grafana dashboard with backup informations",link=https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png]
+image:https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png["Grafana dashboard with backup informations",link=https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png, window=_blank]
 
 === Alerts
 
-This module also setup some alerting in Prometheus for the following cases:
+This module also setups some alerts in Alertmanager for the following cases:
 
-- Partially failed backups ratio higher than a specified amount (`alert_partially_failed_ratio`)
-- Failed backups ratio higher than a specified amount (`alert_failed_ratio`)
-- No successful backup for a specified amount of time (`alert_backup_timeout`)
+- Partially failed backups ratio higher than a specified amount (`alert_partially_failed_ratio`);
+- Failed backups ratio higher than a specified amount (`alert_failed_ratio`);
+- No successful backup for a specified amount of time (`alert_backup_timeout`);
 
 
 == Limitations
 
 === KinD setup
 
-Velero cannot perform backups of `hostPath` volumes, which are the volumes used in a KinD setup. Therefore, this module cannot be used in a Devops stack on KinD.
+Velero cannot perform backups of `hostPath` volumes, which are the volumes used in a KinD platform. Therefore, this module cannot be used in a DevOps Stack on KinD.
 
 == Technical Reference
 
