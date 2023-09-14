@@ -181,13 +181,13 @@ The following providers are used by this module:
 
 - [[provider_kubernetes]] <<provider_kubernetes,kubernetes>> (~> 2)
 
-- [[provider_argocd]] <<provider_argocd,argocd>> (>= 4)
-
 - [[provider_helm]] <<provider_helm,helm>>
 
-- [[provider_null]] <<provider_null,null>> (>= 3)
-
 - [[provider_utils]] <<provider_utils,utils>> (>= 1)
+
+- [[provider_argocd]] <<provider_argocd,argocd>> (>= 4)
+
+- [[provider_null]] <<provider_null,null>> (>= 3)
 
 === Resources
 
@@ -330,6 +330,14 @@ Type: `bool`
 
 Default: `true`
 
+==== [[input_alert_partially_failed_ratio]] <<input_alert_partially_failed_ratio,alert_partially_failed_ratio>>
+
+Description: Percentage of partially failed backups before triggering a Prometheus alert
+
+Type: `number`
+
+Default: `0.25`
+
 ==== [[input_alert_backup_timeout]] <<input_alert_backup_timeout,alert_backup_timeout>>
 
 Description: Timeout in seconds before triggering the last successful backup alert
@@ -373,10 +381,10 @@ Description: the password to access the restic repositories
 [cols="a,a",options="header,autowidth"]
 |===
 |Name |Version
-|[[provider_null]] <<provider_null,null>> |>= 3
 |[[provider_random]] <<provider_random,random>> |n/a
 |[[provider_kubernetes]] <<provider_kubernetes,kubernetes>> |~> 2
 |[[provider_helm]] <<provider_helm,helm>> |n/a
+|[[provider_null]] <<provider_null,null>> |>= 3
 |[[provider_utils]] <<provider_utils,utils>> |>= 1
 |[[provider_argocd]] <<provider_argocd,argocd>> |>= 4
 |===
@@ -507,6 +515,12 @@ map(object({
 |Boolean to enable the provisioning of a Velero dashboard for Grafana.
 |`bool`
 |`true`
+|no
+
+|[[input_alert_partially_failed_ratio]] <<input_alert_partially_failed_ratio,alert_partially_failed_ratio>>
+|Percentage of partially failed backups before triggering a Prometheus alert
+|`number`
+|`0.25`
 |no
 
 |[[input_alert_backup_timeout]] <<input_alert_backup_timeout,alert_backup_timeout>>
