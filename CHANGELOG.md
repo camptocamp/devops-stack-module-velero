@@ -3,11 +3,6 @@
 ## 1.0.0 (2023-09-14)
 
 
-### ⚠ BREAKING CHANGES
-
-* change default namespace to velero
-* change default namespace to backup
-
 ### Features
 
 * add KinD and EKS version ([3a25561](https://github.com/camptocamp/devops-stack-module-velero/commit/3a25561663c8498598516e15dae4200bc5a28125))
