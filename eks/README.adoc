@@ -11,7 +11,7 @@ Here is an example of the module usage:
 - A schedule at 2 a.m, which uses Restic as backend for PVC
 - Prometheus monitoring with a Grafana dashboard
 
-IMPORTANT: The included resources is very important: if the resource `pods` is
+IMPORTANT: The `includedResources` variable is very important: if the resource `pods` is
 specified, then velero will not attempt to use the native snapshot feature of
 the object storage of the cloud provider (EBS snapshots), and will use the File
 System Backup, i.e Restic.
@@ -27,7 +27,6 @@ module "velero" {
   enable_monitoring_dashboard = true
 
   # Automated backups can be specified.
-  #
   backup_schedules = {
 
     # This schedule will use the native snapshot ability to backup the PVC
@@ -75,17 +74,6 @@ module "velero" {
   }
 }
 
-----
-
-Once the Velero controller is deployed on the server, it is also possible to perform manual backup from the `velero` client:
-
-[source,bash]
-----
-velero backup create \
-    --included-namespaces wordpress,loki \
-    --included-resources pv,pvc,pods \
-    --storage-location my-s3-bucket \
-    my-new-backup
 ----
 
 == Technical Reference
