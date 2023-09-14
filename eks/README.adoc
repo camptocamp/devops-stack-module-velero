@@ -62,9 +62,9 @@ module "velero" {
   }
 
   # Triggers an alert if too many backups are partially failed (ratio)
-  alert_partially_failed_ratio = 0.25
+  alert_partially_failed_ratio = 0.25 # 25%
   # Triggers an alert if too many backups are failed (ratio)
-  alert_failed_ratio = 0.1
+  alert_failed_ratio = 0.1 # 10%
   # Triggers an alert if latest backup is older than this, in seconds
   alert_backup_timeout = 60 * 60 * 24
 
