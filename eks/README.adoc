@@ -1,84 +1,92 @@
-= devops-stack-module-velero
-// Document attributes to replace along the document
-// Here you can define variables for something that keeps repeating along the text
-:velero-chart-version: 5.0.2
-:original-repo-url: https://github.com/vmware-tanzu/helm-charts
-
-A https://devops-stack.io[DevOps Stack] module to deploy a backup solution based on https://velero.io[Velero].
-
-This module add the ability to perform backups of a cluster. This includes all Kubernetes objects, although with the GitOps approach of the Devops Stack, it is not necessary to have a backup of all Kubernetes objects, as they are generally disposable and recreated by ArgoCD.
-
-The Velero chart used by this module is shipped in this repository as well, in order to avoid any unwanted behaviors caused by unsupported versions.
-
-[cols="1,1,1",options="autowidth,header"]
-|===
-|Current Chart Version |Original Repository |Default Values
-|*{velero-chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/{velero-chart-version}?modal=values[`values.yaml`]
-|===
-
-Velero needs a storage location for backups, either a S3 compatible storage (AWS S3, Minio, etc.), Azure Blob storage, etc.
-
-*Since this module is meant to be instantiated using its variants, the usage documentation is available in each variant* ( xref:./eks/README.adoc[EKS] ).
+= EKS variant
 
 == Usage
 
 === Backup
 
-For an example of deployment, please see the variants documentation.
+Here is an example of the module usage:
 
-Once the Velero controller is deployed on the server, it is also possible to perform manual backup from the `velero` client:
+- A default backend in a AWS S3 bucket, accessed with a ServiceAccount
+- A schedule at 4 a.m, which uses EBS snapshots as backend for PVC
+- A schedule at 2 a.m, which uses Restic as backend for PVC
+- Prometheus monitoring with a Grafana dashboard
 
-[source,bash]
+IMPORTANT: The `includedResources` variable is very important: if the resource `pods` is
+specified, then velero will not attempt to use the native snapshot feature of
+the object storage of the cloud provider (EBS snapshots), and will use the File
+System Backup, i.e Restic.
+
+[source,terraform]
 ----
-velero backup create \
-    --included-namespaces wordpress,loki \
-    --included-resources pv,pvc,pods \
-    --storage-location my-s3-bucket \
-    my-new-backup
+module "velero" {
+  source           = "git::https://github.com/camptocamp/devops-stack-module-velero.git//eks?ref=<RELEASE>"
+  cluster_name     = local.cluster_name
+  base_domain      = local.base_domain
+  argocd_namespace = module.argocd_bootstrap.argocd_namespace
+
+  enable_monitoring_dashboard = true
+
+  # Automated backups can be specified.
+  backup_schedules = {
+
+    # This schedule will use the native snapshot ability to backup the PVC
+    snapshot-schedule = {
+      # Can temporarly disable snapshot schedules
+      disabled = false
+      # Cron-style scheduling
+      schedule = "2 4 * * *"
+      template = {
+        # Select the backend for this schedule
+        storageLocation    = "backup-bucket"
+        includedNamespaces = ["wordpress"]
+        includedResources  = ["persistentVolumes", "persistentVolumeClaims"]
+      }
+    },
+    # This schedule will force the Restic backend to backup the PVC
+    restic-schedule = {
+      disabled = false
+      schedule = "2 2 * * *"
+      template = {
+        # If using an non-default location:
+        storageLocation    = "backup-bucket"
+        includedNamespaces = ["wordpress"]
+        includedResources  = ["persistentVolumes", "persistentVolumeClaims", "pods"]
+      }
+    }
+  }
+
+  default_backup_storage = {
+    bucket_id    = aws_s3_bucket.velero_backup_storage.id
+    region       = aws_s3_bucket.velero_backup_storage.region
+    iam_role_arn = module.iam_assumable_role_velero.iam_role_arn
+  }
+
+  # Triggers an alert if too many backups are partially failed (ratio)
+  alert_partially_failed_ratio = 0.25 # 25%
+  # Triggers an alert if too many backups are failed (ratio)
+  alert_failed_ratio = 0.1 # 10%
+  # Triggers an alert if latest backup is older than this, in seconds
+  alert_backup_timeout = 60 * 60 * 24
+
+  dependency_ids = {
+    argocd                = module.argocd_bootstrap.id
+    kube-prometheus-stack = module.kube-prometheus-stack.id,
+  }
+}
+
 ----
-
-=== Restore
-
-The backup can be restored manually with the following commands:
-
-[source,bash]
-----
-# Restore from a backup
-velero restore create --from-backup my-new-backup
-# Restore from the last backup of a schedule
-velero restore create --from-schedule restic-schedule
-----
-
-More options are described in the https://velero.io/docs/main/restore-reference/[Velero documentation].
-
-WARNING: In order to perform restore successfully, Velero need that the object doesn't already exists in the target cluster.
-As a disaster recovery tool, it is not able to merge an existing object such as a PVC with its backup.
-
-== Monitoring
-
-If enabled, this module exposes Velero metrics and setup a scrape target for Prometheus.
-
-=== Grafana dashboard
-
-This module contains a Grafana dashboard to monitor the frequency, state and duration of backups, as shown here below.
-
-image:https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png["Grafana dashboard with backup informations",link=https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png, window=_blank]
-
-=== Alerts
-
-This module also setups some alerts in Alertmanager for the following cases:
-
-* Partially failed backups ratio higher than a specified amount (`alert_partially_failed_ratio`);
-* Failed backups ratio higher than a specified amount (`alert_failed_ratio`);
-* No successful backup for a specified amount of time (`alert_backup_timeout`);
-
-== Limitations
-
-=== KinD setup
-
-Velero cannot perform backups of `hostPath` volumes, which are the volumes used in a KinD platform. Therefore, this module cannot be used in a DevOps Stack on KinD.
 
 == Technical Reference
+
+=== Dependencies
+
+==== `module.argocd_bootstrap.id`
+
+Velero is deployed as an ArgoCD application, which means that ArgoCD has to be deployed first.
+
+==== `module.kube-prometheus-stack.id`
+
+As this module contains a Prometheus metrics endpoint and a Grafana dashboard, it has to be deployed after the https://github.com/camptocamp/devops-stack-module-kube-prometheus-stack[Prometheus stack].
 
 // BEGIN_TF_DOCS
 === Requirements
@@ -97,36 +105,41 @@ The following requirements are needed by this module:
 
 The following providers are used by this module:
 
-- [[provider_random]] <<provider_random,random>>
+- [[provider_aws]] <<provider_aws,aws>>
 
-- [[provider_kubernetes]] <<provider_kubernetes,kubernetes>> (~> 2)
+=== Modules
 
-- [[provider_helm]] <<provider_helm,helm>>
+The following Modules are called:
 
-- [[provider_null]] <<provider_null,null>> (>= 3)
+==== [[module_backup]] <<module_backup,backup>>
 
-- [[provider_utils]] <<provider_utils,utils>> (>= 1)
+Source: ../
 
-- [[provider_argocd]] <<provider_argocd,argocd>> (>= 4)
+Version:
 
 === Resources
 
 The following resources are used by this module:
 
-- https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/application[argocd_application.this] (resource)
-- https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/project[argocd_project.this] (resource)
-- https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace[kubernetes_namespace.velero_namespace] (resource)
-- https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/secret[kubernetes_secret.velero_repo_credentials] (resource)
-- https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.dependencies] (resource)
-- https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.k8s_resources] (resource)
-- https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.this] (resource)
-- https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password[random_password.restic_repo_password] (resource)
-- https://registry.terraform.io/providers/hashicorp/helm/latest/docs/data-sources/template[helm_template.this] (data source)
-- https://registry.terraform.io/providers/cloudposse/utils/latest/docs/data-sources/deep_merge_yaml[utils_deep_merge_yaml.values] (data source)
+- https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region[aws_region.current] (data source)
 
 === Required Inputs
 
 The following input variables are required:
+
+==== [[input_default_backup_storage]] <<input_default_backup_storage,default_backup_storage>>
+
+Description: AWS S3 bucket configuration values for the bucket where the backups will be stored.
+
+Type:
+[source,hcl]
+----
+object({
+    bucket_id    = string
+    region       = string
+    iam_role_arn = string
+  })
+----
 
 ==== [[input_cluster_name]] <<input_cluster_name,cluster_name>>
 
@@ -273,18 +286,6 @@ Description: Timeout in seconds before triggering the last successful backup ale
 Type: `number`
 
 Default: `86400`
-
-=== Outputs
-
-The following outputs are exported:
-
-==== [[output_id]] <<output_id,id>>
-
-Description: ID to pass other modules in order to refer to this module as a dependency.
-
-==== [[output_restic_repo_password]] <<output_restic_repo_password,restic_repo_password>>
-
-Description: the password to access the restic repositories
 // END_TF_DOCS
 
 === Reference in table format
@@ -309,12 +310,15 @@ Description: the password to access the restic repositories
 [cols="a,a",options="header,autowidth"]
 |===
 |Name |Version
-|[[provider_null]] <<provider_null,null>> |>= 3
-|[[provider_random]] <<provider_random,random>> |n/a
-|[[provider_kubernetes]] <<provider_kubernetes,kubernetes>> |~> 2
-|[[provider_argocd]] <<provider_argocd,argocd>> |>= 4
-|[[provider_helm]] <<provider_helm,helm>> |n/a
-|[[provider_utils]] <<provider_utils,utils>> |>= 1
+|[[provider_aws]] <<provider_aws,aws>> |n/a
+|===
+
+= Modules
+
+[cols="a,a,a",options="header,autowidth"]
+|===
+|Name |Source |Version
+|[[module_backup]] <<module_backup,backup>> |../ |
 |===
 
 = Resources
@@ -322,16 +326,7 @@ Description: the password to access the restic repositories
 [cols="a,a",options="header,autowidth"]
 |===
 |Name |Type
-|https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/application[argocd_application.this] |resource
-|https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/project[argocd_project.this] |resource
-|https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace[kubernetes_namespace.velero_namespace] |resource
-|https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/secret[kubernetes_secret.velero_repo_credentials] |resource
-|https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.dependencies] |resource
-|https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.k8s_resources] |resource
-|https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.this] |resource
-|https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password[random_password.restic_repo_password] |resource
-|https://registry.terraform.io/providers/hashicorp/helm/latest/docs/data-sources/template[helm_template.this] |data source
-|https://registry.terraform.io/providers/cloudposse/utils/latest/docs/data-sources/deep_merge_yaml[utils_deep_merge_yaml.values] |data source
+|https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region[aws_region.current] |data source
 |===
 
 = Inputs
@@ -339,6 +334,22 @@ Description: the password to access the restic repositories
 [cols="a,a,a,a,a",options="header,autowidth"]
 |===
 |Name |Description |Type |Default |Required
+|[[input_default_backup_storage]] <<input_default_backup_storage,default_backup_storage>>
+|AWS S3 bucket configuration values for the bucket where the backups will be stored.
+|
+
+[source]
+----
+object({
+    bucket_id    = string
+    region       = string
+    iam_role_arn = string
+  })
+----
+
+|n/a
+|yes
+
 |[[input_cluster_name]] <<input_cluster_name,cluster_name>>
 |Name given to the cluster. Value used for naming some the resources created by the module.
 |`string`
@@ -463,15 +474,6 @@ map(object({
 |`86400`
 |no
 
-|===
-
-= Outputs
-
-[cols="a,a",options="header,autowidth"]
-|===
-|Name |Description
-|[[output_id]] <<output_id,id>> |ID to pass other modules in order to refer to this module as a dependency.
-|[[output_restic_repo_password]] <<output_restic_repo_password,restic_repo_password>> |the password to access the restic repositories
 |===
 // END_TF_TABLES
 ====

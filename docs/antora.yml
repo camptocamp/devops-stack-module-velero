@@ -1,6 +1,6 @@
 ---
-name: "template"
-title: "Module Template"
+name: "velero"
+title: "Velero Module"
 version: true
 start_page: README.adoc
 nav:

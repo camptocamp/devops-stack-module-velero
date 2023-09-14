@@ -23,8 +23,7 @@ locals {
               annotations = {
                 message = "Velero backup {{ $labels.schedule }} has {{ $value | humanizePercentage }} partially failed backups."
               }
-              expr = "velero_backup_partial_failure_total{schedule!=\"\"} / velero_backup_attempt_total{schedule!=\"\"} > 0.25"
-              for  = "15m"
+              expr = "velero_backup_partial_failure_total{schedule!=\"\"} / velero_backup_attempt_total{schedule!=\"\"} > ${var.alert_partially_failed_ratio}"
               labels = {
                 severity = "warning"
               }
@@ -34,8 +33,7 @@ locals {
               annotations = {
                 message = "Velero backup {{ $labels.schedule }} has {{ $value | humanizePercentage }} failed backups."
               }
-              expr = "velero_backup_partial_failure_total{schedule!=\"\"} / velero_backup_attempt_total{schedule!=\"\"} > 0.25"
-              for  = "15m"
+              expr = "velero_backup_partial_failure_total{schedule!=\"\"} / velero_backup_attempt_total{schedule!=\"\"} > ${var.alert_failed_ratio}"
               labels = {
                 severity = "warning"
               }

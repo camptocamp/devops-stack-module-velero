@@ -92,6 +92,18 @@ variable "enable_monitoring_dashboard" {
   default     = true
 }
 
+variable "alert_partially_failed_ratio" {
+  description = "Percentage of partially failed backups before triggering a Prometheus alert"
+  type        = number
+  default     = 0.25
+}
+
+variable "alert_failed_ratio" {
+  description = "Percentage of failed backups before triggering a Prometheus alert"
+  type        = number
+  default     = 0.25
+}
+
 variable "alert_backup_timeout" {
   description = "Timeout in seconds before triggering the last successful backup alert"
   type        = number
