@@ -112,14 +112,22 @@ velero restore create --from-backup my-new-backup
 velero restore create --from-schedule restic-schedule
 ----
 
-In order to
-TODO: Link to Velero CLI documentation
+More options are described in the https://velero.io/docs/main/restore-reference/[Velero documentation].
 
-TODO: In order to perform restore successful
+NOTE: In order to perform restore successfully, Velero need that the object doesn't already exists in the target cluster.
+As a disaster recovery tool, it is not able to merge an existing object such as a PVC with its backup.
 
 == Monitoring
 
+If enabled, this module exposes Velero metrics and setup a scrape target for Prometheus.
+
+=== Grafana dashboard
+
+This module contains a Grafana dashboard to monitor the frequency, state and frequency of backups, as shown here below.
+
 image:https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png["Grafana dashboard with backup informations",link=https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/doc/docs/modules/ROOT/assets/images/grafana-velero-dashboard.png]
+
+=== Alerts
 
 This module also setup some alerting in Prometheus for the following cases:
 
