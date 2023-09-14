@@ -16,16 +16,20 @@ The Velero chart used by this module is shipped in this repository as well, in o
 |*{velero-chart-version}* |{original-repo-url}/tree/main/charts/velero[Chart] | https://artifacthub.io/packages/helm/vmware-tanzu/velero/{velero-chart-version}?modal=values[`values.yaml`]
 |===
 
+Velero needs a storage location for backups, either a S3 compatible storage (AWS S3, Minio, etc.), Azure Blob storage, etc.
+
 == Usage
 
 === Backup
 
+==== S3 bucket or equivalent
+
 Here is an example of the module usage:
 
-- A default backend in a AWS S3 bucket, accessed with a ServiceAccount
-- A schedule at 4 a.m, which uses EBS snapshots as backend for PVC
-- A schedule at 2 a.m, which uses Restic as backend for PVC
-- Prometheus monitoring with a Grafana dashboard
+* A default backend in a AWS S3 bucket, accessed with a ServiceAccount.
+* A schedule at 4 a.m, which uses EBS snapshots as backend for PVC
+* A schedule at 2 a.m, which uses Restic as backend for PVC
+* Prometheus monitoring with a Grafana dashboard
 
 IMPORTANT: The included resources is very important: if the resource `pods` is
 specified, then velero will not attempt to use the native snapshot feature of
@@ -135,9 +139,9 @@ image:https://raw.githubusercontent.com/camptocamp/devops-stack-module-velero/do
 
 This module also setups some alerts in Alertmanager for the following cases:
 
-- Partially failed backups ratio higher than a specified amount (`alert_partially_failed_ratio`);
-- Failed backups ratio higher than a specified amount (`alert_failed_ratio`);
-- No successful backup for a specified amount of time (`alert_backup_timeout`);
+* Partially failed backups ratio higher than a specified amount (`alert_partially_failed_ratio`);
+* Failed backups ratio higher than a specified amount (`alert_failed_ratio`);
+* No successful backup for a specified amount of time (`alert_backup_timeout`);
 
 
 == Limitations
@@ -157,12 +161,6 @@ As this module contains a Prometheus metrics endpoint and a Grafana dashboard, i
 ==== `module.argocd`
 
 Velero is deployed as an ArgoCD application, which means that ArgoCD has to be deployed first.
-
-==== S3 bucket or equivalent
-
-In order to perform backups, Velero needs a storage location for backups, either a S3 compatible storage (AWS S3, Minio, etc.), Azure Blob storage, etc.
-
-Velero backs all Kubernetes objects to the designated
 
 // BEGIN_TF_DOCS
 === Requirements
