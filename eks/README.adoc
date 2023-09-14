@@ -117,36 +117,41 @@ The following requirements are needed by this module:
 
 The following providers are used by this module:
 
-- [[provider_null]] <<provider_null,null>> (>= 3)
+- [[provider_aws]] <<provider_aws,aws>>
 
-- [[provider_random]] <<provider_random,random>>
+=== Modules
 
-- [[provider_kubernetes]] <<provider_kubernetes,kubernetes>> (~> 2)
+The following Modules are called:
 
-- [[provider_helm]] <<provider_helm,helm>>
+==== [[module_backup]] <<module_backup,backup>>
 
-- [[provider_utils]] <<provider_utils,utils>> (>= 1)
+Source: ../
 
-- [[provider_argocd]] <<provider_argocd,argocd>> (>= 4)
+Version:
 
 === Resources
 
 The following resources are used by this module:
 
-- https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/application[argocd_application.this] (resource)
-- https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/project[argocd_project.this] (resource)
-- https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace[kubernetes_namespace.velero_namespace] (resource)
-- https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/secret[kubernetes_secret.velero_repo_credentials] (resource)
-- https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.dependencies] (resource)
-- https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.k8s_resources] (resource)
-- https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.this] (resource)
-- https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password[random_password.restic_repo_password] (resource)
-- https://registry.terraform.io/providers/hashicorp/helm/latest/docs/data-sources/template[helm_template.this] (data source)
-- https://registry.terraform.io/providers/cloudposse/utils/latest/docs/data-sources/deep_merge_yaml[utils_deep_merge_yaml.values] (data source)
+- https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region[aws_region.current] (data source)
 
 === Required Inputs
 
 The following input variables are required:
+
+==== [[input_default_backup_storage]] <<input_default_backup_storage,default_backup_storage>>
+
+Description: AWS S3 bucket configuration values for the bucket where the backups will be stored.
+
+Type:
+[source,hcl]
+----
+object({
+    bucket_id    = string
+    region       = string
+    iam_role_arn = string
+  })
+----
 
 ==== [[input_cluster_name]] <<input_cluster_name,cluster_name>>
 
@@ -293,18 +298,6 @@ Description: Timeout in seconds before triggering the last successful backup ale
 Type: `number`
 
 Default: `86400`
-
-=== Outputs
-
-The following outputs are exported:
-
-==== [[output_id]] <<output_id,id>>
-
-Description: ID to pass other modules in order to refer to this module as a dependency.
-
-==== [[output_restic_repo_password]] <<output_restic_repo_password,restic_repo_password>>
-
-Description: the password to access the restic repositories
 // END_TF_DOCS
 
 === Reference in table format
@@ -329,12 +322,15 @@ Description: the password to access the restic repositories
 [cols="a,a",options="header,autowidth"]
 |===
 |Name |Version
-|[[provider_random]] <<provider_random,random>> |n/a
-|[[provider_kubernetes]] <<provider_kubernetes,kubernetes>> |~> 2
-|[[provider_argocd]] <<provider_argocd,argocd>> |>= 4
-|[[provider_helm]] <<provider_helm,helm>> |n/a
-|[[provider_null]] <<provider_null,null>> |>= 3
-|[[provider_utils]] <<provider_utils,utils>> |>= 1
+|[[provider_aws]] <<provider_aws,aws>> |n/a
+|===
+
+= Modules
+
+[cols="a,a,a",options="header,autowidth"]
+|===
+|Name |Source |Version
+|[[module_backup]] <<module_backup,backup>> |../ |
 |===
 
 = Resources
@@ -342,16 +338,7 @@ Description: the password to access the restic repositories
 [cols="a,a",options="header,autowidth"]
 |===
 |Name |Type
-|https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/application[argocd_application.this] |resource
-|https://registry.terraform.io/providers/oboukili/argocd/latest/docs/resources/project[argocd_project.this] |resource
-|https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace[kubernetes_namespace.velero_namespace] |resource
-|https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/secret[kubernetes_secret.velero_repo_credentials] |resource
-|https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.dependencies] |resource
-|https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.k8s_resources] |resource
-|https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource[null_resource.this] |resource
-|https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password[random_password.restic_repo_password] |resource
-|https://registry.terraform.io/providers/hashicorp/helm/latest/docs/data-sources/template[helm_template.this] |data source
-|https://registry.terraform.io/providers/cloudposse/utils/latest/docs/data-sources/deep_merge_yaml[utils_deep_merge_yaml.values] |data source
+|https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region[aws_region.current] |data source
 |===
 
 = Inputs
@@ -359,6 +346,22 @@ Description: the password to access the restic repositories
 [cols="a,a,a,a,a",options="header,autowidth"]
 |===
 |Name |Description |Type |Default |Required
+|[[input_default_backup_storage]] <<input_default_backup_storage,default_backup_storage>>
+|AWS S3 bucket configuration values for the bucket where the backups will be stored.
+|
+
+[source]
+----
+object({
+    bucket_id    = string
+    region       = string
+    iam_role_arn = string
+  })
+----
+
+|n/a
+|yes
+
 |[[input_cluster_name]] <<input_cluster_name,cluster_name>>
 |Name given to the cluster. Value used for naming some the resources created by the module.
 |`string`
@@ -483,15 +486,6 @@ map(object({
 |`86400`
 |no
 
-|===
-
-= Outputs
-
-[cols="a,a",options="header,autowidth"]
-|===
-|Name |Description
-|[[output_id]] <<output_id,id>> |ID to pass other modules in order to refer to this module as a dependency.
-|[[output_restic_repo_password]] <<output_restic_repo_password,restic_repo_password>> |the password to access the restic repositories
 |===
 // END_TF_TABLES
 ====
