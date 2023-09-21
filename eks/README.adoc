@@ -1,4 +1,4 @@
-= EKS variant
+= EKS Variant
 
 == Usage
 
