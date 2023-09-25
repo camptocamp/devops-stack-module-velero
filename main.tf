@@ -57,17 +57,6 @@ resource "argocd_project" "this" {
   }
 }
 
-data "helm_template" "this" {
-  name      = "velero"
-  namespace = var.namespace
-  chart     = "${path.module}/charts/velero"
-  values    = [sensitive(data.utils_deep_merge_yaml.values.output)]
-}
-
-resource "null_resource" "k8s_resources" {
-  triggers = data.helm_template.this.manifests
-}
-
 data "utils_deep_merge_yaml" "values" {
   input = [for i in concat(local.helm_values, var.helm_values) : yamlencode(i)]
 }
