@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/camptocamp/devops-stack-module-velero/compare/v1.0.0...v1.0.1) (2023-09-25)
+
+
+### Bug Fixes
+
+* remove Helm templating from Terraform plan ([#9](https://github.com/camptocamp/devops-stack-module-velero/issues/9)) ([d1e5295](https://github.com/camptocamp/devops-stack-module-velero/commit/d1e52953b98ca7eeea2da053d5d3046f6e71996a))
+
 ## 1.0.0 (2023-09-14)
 
 
